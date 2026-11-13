@@ -1,0 +1,159 @@
+---
+import '../styles/portal.css';
+import { portal } from '../portal.config';
+import { translations } from '../lib/i18n';
+import { getDocs, href } from '../lib/docs';
+import Search from '../components/Search.astro';
+import ThemePicker from '../components/ThemePicker.astro';
+interface Props {
+	title: string;
+	description: string;
+	headings?: { depth: number; slug: string; text: string }[];
+	draft?: boolean;
+	updated?: Date;
+}
+const { title, description, headings = [], draft, updated } = Astro.props;
+const docs = await getDocs();
+const t = translations(portal.locale);
+const current = docs.findIndex((doc) => href(doc.id) === Astro.url.pathname);
+const previous = current > 0 ? docs[current - 1] : undefined;
+const next = current >= 0 ? docs[current + 1] : docs[0];
+const canonical = Astro.site
+	? new URL(Astro.url.pathname, Astro.site)
+	: undefined;
+---
+
+<!doctype html>
+<html lang={portal.locale}>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width" />
+		<meta name="description" content={description} />
+		<meta name="color-scheme" content="light dark" />
+		<title>{title} · {portal.title}</title>
+		{canonical && <link rel="canonical" href={canonical} />}
+		{draft && <meta name="robots" content="noindex" />}
+		<script is:inline>
+			let preference = 'system';
+			try {
+				const saved = localStorage.getItem('theme');
+				if (saved === 'light' || saved === 'dark') preference = saved;
+			} catch {}
+			document.documentElement.dataset.themePreference = preference;
+			document.documentElement.dataset.theme =
+				preference === 'system'
+					? matchMedia('(prefers-color-scheme: dark)').matches
+						? 'dark'
+						: 'light'
+					: preference;
+		</script>
+	</head>
+	<body>
+		<a class="skip" href="#content">
+			{t.skip}
+		</a>
+		<header class="header">
+			<a class="brand" href={href()}>
+				<span class="brand-mark" aria-hidden="true">
+					/
+				</span>
+				{portal.title}
+			</a>
+			<nav class="header-tools" aria-label={t.toolbar}>
+				<Search />
+				<ThemePicker />
+			</nav>
+		</header>
+		<div class="shell">
+			<aside class="sidebar">
+				<details class="docs-menu" open>
+					<summary>{t.navigation}</summary>
+					<nav aria-label={t.navigation}>
+						<a
+							href={href()}
+							aria-current={Astro.url.pathname === href() ? 'page' : undefined}
+						>
+							{t.home}
+						</a>
+						{portal.sections.map((section) => (
+							<section>
+								<h2>{section.label[portal.locale]}</h2>
+								{docs
+									.filter((doc) => doc.data.section === section.id)
+									.map((doc) => (
+										<a
+											href={href(doc.id)}
+											aria-current={
+												Astro.url.pathname === href(doc.id) ? 'page' : undefined
+											}
+										>
+											{doc.data.title}
+										</a>
+									))}
+							</section>
+						))}
+					</nav>
+				</details>
+			</aside>
+			<main id="content" tabindex="-1">
+				{draft && <p class="notice">{t.draft}</p>}
+				<div class="page-heading">
+					<p class="eyebrow">{portal.title}</p>
+					<h1>{title}</h1>
+					<p class="lead">{description}</p>
+				</div>
+				{updated && (
+					<p class="updated">
+						{t.updated}:{' '}
+						<time datetime={updated.toISOString()}>
+							{new Intl.DateTimeFormat(portal.locale, {
+								dateStyle: 'long',
+								timeZone: 'UTC',
+							}).format(updated)}
+						</time>
+					</p>
+				)}
+				<article class="prose">
+					<slot />
+				</article>
+				<nav class="pagination" aria-label={t.pages}>
+					{previous && (
+						<a href={href(previous.id)} rel="prev">
+							<span>{t.previous}</span>
+							{previous.data.title}
+						</a>
+					)}
+					{next && (
+						<a href={href(next.id)} rel="next">
+							<span>{t.next}</span>
+							{next.data.title}
+						</a>
+					)}
+				</nav>
+			</main>
+			<aside class="toc">
+				<nav aria-label={t.contents}>
+					{headings.some((h) => h.depth > 1 && h.depth < 4) && (
+						<h2>{t.contents}</h2>
+					)}
+					{headings
+						.filter((h) => h.depth > 1 && h.depth < 4)
+						.map((h) => (
+							<a class:list={{ nested: h.depth === 3 }} href={`#${h.slug}`}>
+								{h.text}
+							</a>
+						))}
+				</nav>
+			</aside>
+		</div>
+		<script>
+			const menu = document.querySelector<HTMLDetailsElement>('.docs-menu');
+			const mobile = matchMedia('(max-width: 700px)');
+			function syncMenu() {
+				if (menu) menu.open = !mobile.matches;
+			}
+			syncMenu();
+			mobile.addEventListener('change', syncMenu);
+		</script>
+	</body>
+</html>

@@ -1,0 +1,11 @@
+---
+import Portal from '../layouts/Portal.astro';
+import { portal } from '../portal.config';
+import { translations } from '../lib/i18n';
+import { href } from '../lib/docs';
+const t = translations(portal.locale);
+---
+
+<Portal title="404" description={t.notFound}>
+	<a href={href()}>{t.back}</a>
+</Portal>

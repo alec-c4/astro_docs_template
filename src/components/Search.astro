@@ -1,0 +1,90 @@
+---
+import { translations } from '../lib/i18n';
+import { portal } from '../portal.config';
+import { href } from '../lib/docs';
+const t = translations(portal.locale);
+---
+
+<div
+	class="search"
+	data-search
+	data-index={href('search.json').replace(/\/$/, '')}
+	data-empty={t.noResults}
+	data-error={t.searchError}
+>
+	<label class="sr-only" for="docs-search">
+		{t.search}
+	</label>
+	<input
+		id="docs-search"
+		type="search"
+		placeholder={t.searchHint}
+		autocomplete="off"
+		aria-keyshortcuts="Meta+K Control+K"
+	/>
+	<kbd class="search-shortcut" aria-hidden="true">
+		⌘ K
+	</kbd>
+	<div data-search-results aria-live="polite"></div>
+</div>
+<script>
+	const root = document.querySelector<HTMLElement>('[data-search]');
+	const input = root?.querySelector('input');
+	const results = root?.querySelector<HTMLElement>('[data-search-results]');
+	if (root && input && results) {
+		const shortcut = root.querySelector<HTMLElement>('.search-shortcut')!;
+		shortcut.textContent = navigator.platform.includes('Mac')
+			? '⌘ K'
+			: 'Ctrl K';
+		document.addEventListener('keydown', (event) => {
+			if (
+				(event.metaKey || event.ctrlKey) &&
+				!event.altKey &&
+				!event.shiftKey &&
+				!event.isComposing &&
+				event.key.toLowerCase() === 'k'
+			) {
+				event.preventDefault();
+				input.focus();
+				input.select();
+			}
+		});
+		type Entry = { title: string; text: string; href: string };
+		let entries: Promise<Entry[]> | undefined;
+		let revision = 0;
+		input.addEventListener('input', async () => {
+			const currentRevision = ++revision;
+			const query = input.value
+				.trim()
+				.toLocaleLowerCase(document.documentElement.lang);
+			results.replaceChildren();
+			if (!query) return;
+			try {
+				entries ??= fetch(root.dataset.index!).then((r) => {
+					if (!r.ok) throw new Error();
+					return r.json();
+				});
+				const data = await entries;
+				if (currentRevision !== revision) return;
+				const matches = data
+					.filter((entry) =>
+						`${entry.title} ${entry.text}`
+							.toLocaleLowerCase(document.documentElement.lang)
+							.includes(query),
+					)
+					.slice(0, 10);
+				for (const entry of matches) {
+					const link = document.createElement('a');
+					link.href = entry.href;
+					link.textContent = entry.title;
+					results.append(link);
+				}
+				if (!matches.length) results.textContent = root.dataset.empty!;
+			} catch {
+				entries = undefined;
+				if (currentRevision !== revision) return;
+				results.textContent = root.dataset.error!;
+			}
+		});
+	}
+</script>

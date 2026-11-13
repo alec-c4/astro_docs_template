@@ -1,0 +1,111 @@
+---
+import type { ApiParam } from '../lib/table';
+import { translations } from '../lib/i18n';
+import { portal } from '../portal.config';
+interface Props {
+	params: ApiParam[];
+}
+const { params } = Astro.props;
+const t = translations(portal.locale);
+---
+
+<div data-params-table>
+	<label>
+		{t.filter}
+		<input type="search" data-filter />
+	</label>
+	<div
+		class="table-scroll"
+		tabindex="0"
+		role="region"
+		aria-label={t.parameters}
+	>
+		<table>
+			<caption>{t.parameters}</caption>
+			<thead>
+				<tr>
+					<th scope="col" aria-sort="none">
+						<button type="button" data-sort="name">
+							{t.name}
+						</button>
+					</th>
+					<th scope="col" aria-sort="none">
+						<button type="button" data-sort="type">
+							{t.type}
+						</button>
+					</th>
+					<th scope="col" aria-sort="none">
+						<button type="button" data-sort="required">
+							{t.required}
+						</button>
+					</th>
+					<th scope="col">{t.description}</th>
+				</tr>
+			</thead>
+			<tbody>
+				{params.map((param) => (
+					<tr
+						data-name={param.name}
+						data-type={param.type}
+						data-required={String(param.required)}
+					>
+						<td>
+							<code>{param.name}</code>
+						</td>
+						<td>{param.type}</td>
+						<td>{param.required ? t.yes : t.no}</td>
+						<td>{param.description}</td>
+					</tr>
+				))}
+			</tbody>
+		</table>
+	</div>
+	<p data-empty role="status" hidden={params.length > 0}>
+		{t.empty}
+	</p>
+</div>
+<script>
+	import { filterParams, sortParams, type ApiParam } from '../lib/table';
+	document
+		.querySelectorAll<HTMLElement>('[data-params-table]')
+		.forEach((root) => {
+			const rows = [...root.querySelectorAll<HTMLTableRowElement>('tbody tr')];
+			const params: ApiParam[] = rows.map((row) => ({
+				name: row.dataset.name!,
+				type: row.dataset.type!,
+				required: row.dataset.required === 'true',
+				description: row.cells[3].textContent ?? '',
+			}));
+			const rowByParam = new Map(params.map((param, i) => [param, rows[i]]));
+			const input = root.querySelector<HTMLInputElement>('input')!;
+			const body = root.querySelector('tbody')!;
+			const empty = root.querySelector<HTMLElement>('[data-empty]')!;
+			input.addEventListener('input', () => {
+				const visible = new Set(filterParams(params, input.value));
+				params.forEach((param) => {
+					rowByParam.get(param)!.hidden = !visible.has(param);
+				});
+				empty.hidden = rows.some((row) => !row.hidden);
+			});
+			root
+				.querySelectorAll<HTMLButtonElement>('[data-sort]')
+				.forEach((button) => {
+					button.addEventListener('click', () => {
+						const th = button.closest('th')!;
+						const ascending = th.getAttribute('aria-sort') !== 'ascending';
+						root
+							.querySelectorAll('[aria-sort]')
+							.forEach((cell) => cell.setAttribute('aria-sort', 'none'));
+						th.setAttribute(
+							'aria-sort',
+							ascending ? 'ascending' : 'descending',
+						);
+						sortParams(
+							params,
+							button.dataset.sort as keyof ApiParam,
+							ascending ? 'asc' : 'desc',
+						).forEach((param) => body.append(rowByParam.get(param)!));
+					});
+				});
+		});
+</script>

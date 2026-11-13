@@ -1,5 +1,8 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
-
-// https://astro.build/config
-export default defineConfig({});
+import mdx from '@astrojs/mdx';
+export default defineConfig({
+	site: process.env.SITE_URL,
+	base: process.env.BASE_PATH || '/',
+	integrations: [mdx()],
+});

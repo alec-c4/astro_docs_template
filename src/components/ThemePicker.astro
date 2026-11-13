@@ -1,0 +1,58 @@
+---
+import { translations } from '../lib/i18n';
+import { portal } from '../portal.config';
+const t = translations(portal.locale);
+---
+
+<label class="theme-picker">
+	<span class="sr-only">{t.theme}</span>
+	<select data-theme-select>
+		<option value="system">{t.systemTheme}</option>
+		<option value="light">{t.lightTheme}</option>
+		<option value="dark">{t.darkTheme}</option>
+	</select>
+	<svg
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		stroke-width="2"
+		stroke-linecap="round"
+		stroke-linejoin="round"
+		aria-hidden="true"
+		focusable="false"
+	>
+		<path d="m6 9 6 6 6-6" />
+	</svg>
+</label>
+<script>
+	const picker = document.querySelector<HTMLSelectElement>(
+		'[data-theme-select]',
+	)!;
+	const root = document.documentElement;
+	const systemTheme = matchMedia('(prefers-color-scheme: dark)');
+	let preference = root.dataset.themePreference ?? 'system';
+	function applyTheme() {
+		const theme =
+			preference === 'system'
+				? systemTheme.matches
+					? 'dark'
+					: 'light'
+				: preference;
+		const changed = root.dataset.theme !== theme;
+		root.dataset.theme = theme;
+		root.dataset.themePreference = preference;
+		picker.value = preference;
+		if (changed) document.dispatchEvent(new Event('portal:theme'));
+	}
+	applyTheme();
+	picker.addEventListener('change', () => {
+		preference = picker.value;
+		try {
+			localStorage.setItem('theme', preference);
+		} catch {}
+		applyTheme();
+	});
+	systemTheme.addEventListener('change', () => {
+		if (preference === 'system') applyTheme();
+	});
+</script>

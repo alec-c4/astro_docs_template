@@ -1,0 +1,39 @@
+---
+title: API parameters
+description: An interactive parameter table with filtering and sorting.
+section: reference
+order: 1
+---
+
+import ApiParamsTable from '@components/ApiParamsTable.astro';
+
+## Request parameters
+
+The table is available without JavaScript. In the browser, you can filter names and sort columns.
+
+<ApiParamsTable
+	params={[
+		{
+			name: 'id',
+			type: 'string',
+			required: true,
+			description: 'Record identifier',
+		},
+		{
+			name: 'limit',
+			type: 'number',
+			required: false,
+			description: 'Number of records per page',
+		},
+		{
+			name: 'cursor',
+			type: 'string',
+			required: false,
+			description: 'Cursor for the next page',
+		},
+	]}
+/>
+
+## Usage
+
+Import `ApiParamsTable` using the `@components/` alias and pass a `params` array with `name`, `type`, `required`, and `description` fields.

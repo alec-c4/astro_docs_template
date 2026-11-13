@@ -1,0 +1,58 @@
+---
+import { translations } from '../lib/i18n';
+import { portal } from '../portal.config';
+---
+
+<div data-diagrams data-error={translations(portal.locale).diagramError}></div>
+<script>
+	const blocks = [
+		...document.querySelectorAll<HTMLElement>(
+			'pre[data-language="mermaid"], pre:has(code.language-mermaid)',
+		),
+	];
+	if (blocks.length) {
+		const sources = blocks.map((block) => block.textContent ?? '');
+		let generation = 0;
+		async function renderDiagrams() {
+			const current = ++generation;
+			try {
+				const { default: mermaid } = await import('mermaid');
+				mermaid.initialize({
+					startOnLoad: false,
+					securityLevel: 'strict',
+					theme:
+						document.documentElement.dataset.theme === 'dark'
+							? 'dark'
+							: 'neutral',
+				});
+				for (const [index, block] of blocks.entries()) {
+					const result = await mermaid.render(
+						`diagram-${current}-${index}`,
+						sources[index],
+					);
+					if (current !== generation) return;
+					let output = block.nextElementSibling as HTMLElement | null;
+					if (!output?.hasAttribute('data-diagram')) {
+						output = document.createElement('div');
+						output.setAttribute('data-diagram', '');
+						block.after(output);
+					}
+					output.innerHTML = result.svg;
+					block.hidden = true;
+				}
+			} catch {
+				if (current !== generation) return;
+				blocks.forEach((block) => {
+					block.hidden = false;
+					block.nextElementSibling?.matches('[data-diagram]') &&
+						block.nextElementSibling.remove();
+				});
+				const status = document.querySelector<HTMLElement>('[data-diagrams]')!;
+				status.setAttribute('role', 'status');
+				status.textContent = status.dataset.error!;
+			}
+		}
+		void renderDiagrams();
+		document.addEventListener('portal:theme', () => void renderDiagrams());
+	}
+</script>

@@ -1,0 +1,38 @@
+---
+title: Environments
+description: Provide instructions for multiple environments on one page.
+section: reference
+order: 2
+---
+
+import EnvSwitcher from '@components/EnvSwitcher.astro';
+
+## Select an environment
+
+Use the arrow keys, Home, and End to switch tabs. A URL with `?env=stage` opens that environment immediately.
+
+<EnvSwitcher envs={['dev', 'stage', 'prod']} defaultEnv="dev">
+	<div data-env="dev">
+		<h3>Development</h3>
+		<p>Run locally with test data.</p>
+		<pre>
+			<code>npm run dev -- --background</code>
+		</pre>
+	</div>
+	<div data-env="stage">
+		<h3>Staging</h3>
+		<p>Verify the build in a staging environment before publishing.</p>
+		<pre>
+			<code>npm run build</code>
+		</pre>
+	</div>
+	<div data-env="prod">
+		<h3>Production</h3>
+		<p>Publish the contents of dist to a static host.</p>
+	</div>
+</EnvSwitcher>
+
+## Usage
+
+Pass `envs`, an optional `defaultEnv`, and child blocks with matching `data-env` attributes.
+Without JavaScript, all variants remain available.
